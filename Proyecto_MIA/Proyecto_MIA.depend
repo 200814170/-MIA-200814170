@@ -1,0 +1,5 @@
+# depslib dependency file v1.0
+1469763941 source:/home/tony/Escritorio/Proyecto MIA/Proyecto_MIA/main.c
+	<stdio.h>
+	<stdlib.h>
+
