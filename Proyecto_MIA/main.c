@@ -3,13 +3,18 @@
 #include <string.h>
 
 int main() {
-    char comando[100];//comando de entrada
-    char parametro1[100] = " ";//tamaña del disco
-    char parametro2[100] = " ";//unidades del tamaño
-    char parametro3[100] = " ";//direccion donde se crea el archivo que simula el disco
-    char parametro4[100] = " ";//nombre del disco
-    int salida = 1;//Permanecia en el sistema; 0 = salir, 1 = dentro
-    int aceptar = 1;//aceptacion del analizador de comando
+    char comando[100]; //comando de entrada
+    char tamanio[100] = " "; //....................tamaña
+    char unidades_tamanio[100] = " "; //...........unidades del tamaño
+    char path[100] = " "; //.......................direccion path
+    char nombre[100] = " "; //.....................nombre
+    char tipo[100] = ""; //........................tipo de particion
+    char ajuste[100] = ""; //......................ajuste para la particion
+    char delete[100] = ""; //......................borrar parricion
+    char add[100] = ""; //.........................agregar espacio a la particion
+
+    int salida = 1; //.............................Permanecia en el sistema; 0 = salir, 1 = dentro
+    int aceptar = 1; //............................aceptacion del analizador de comando
 
     while (salida != 0) {
         printf("**************** PROYECTO MANEJO E IMPLEMENTACION DE ARCHIVOS**************** \n");
@@ -27,16 +32,38 @@ int main() {
         int estado = 0;
         while (fin != 0) {//inicio del while1
             switch (estado) {
-                case 0://Mkdisk
+                case 0:
+                    //Mkdisk
                     if (comando[i] == 'M' && comando[i + 1] == 'K' && comando[i + 2] == 'D' && comando[i + 3] == 'I' && comando[i + 4] == 'S' && comando[i + 5] == 'K') {
                         //printf("Comando Mkdisk\n");
                         estado = 1;
                         i = i + 6;
-                        limpiar(parametro1);
-                        limpiar(parametro2);
-                        limpiar(parametro3);
-                        limpiar(parametro4);
+                        limpiar(tamanio);
+                        limpiar(unidades_tamanio);
+                        limpiar(path);
+                        limpiar(nombre);
                         aceptar = 1;
+                    //rmdisk
+                    } else if (comando[i] == 'R' && comando[i + 1] == 'M' && comando[i + 2] == 'D' && comando[i + 3] == 'I' && comando[i + 4] == 'S' && comando[i + 5] == 'K') {
+                        //printf("Comando Rmdisk\n");
+                        estado = 2;
+                        i = i + 6;
+                        limpiar(tamanio);
+                        aceptar = 1;
+                    //fdisk
+                    } else if (comando[i] == 'F' && comando[i + 1] == 'D' && comando[i + 2] == 'I' && comando[i + 3] == 'S' && comando[i + 4] == 'K') {
+                        printf("Comando fdisk\n");
+                        estado = 3;
+                        i = i + 6;
+                        limpiar(tamanio);
+                        limpiar(unidades_tamanio);
+                        limpiar(path);
+                        limpiar(nombre);
+                        limpiar(tipo);
+                        limpiar(ajuste);
+                        limpiar(delete);
+                        limpiar(add);
+                    //salir
                     } else if (comando[i] == 'S' && comando[i + 1] == 'A' && comando[i + 2] == 'L' && comando[i + 3] == 'I' && comando[i + 4] == 'R') {
                         //printf("Comando Salir\n");
                         estado = 10;
@@ -45,10 +72,7 @@ int main() {
                     }
                     break;
                 case 1:
-                    if (comando[i] == ' ') {
-                        estado = 1;
-                        i++;
-                    }else if (comando[i] == '\\') {
+                    if (comando[i] == ' ' || comando[i] == '\\' || comando[i] == '\n') {
                         estado = 1;
                         i++;
                     } else if (comando[i] == '-' && comando[i + 1] == 'S' && comando[i + 2] == 'I' && comando[i + 3] == 'Z' && comando[i + 4] == 'E' && comando[i + 5] == ':' && comando[i + 6] == ':') {
@@ -60,7 +84,7 @@ int main() {
                             if (comando[i] == '-') {
                                 break;
                             }
-                            parametro1[contador] = comando[i];
+                            tamanio[contador] = comando[i];
                             contador++;
                             i++;
                         }
@@ -71,9 +95,15 @@ int main() {
                         int contador = 0;
                         while (comando[i] != ' ') {
                             if (comando[i] == '-') {
-                                break;
+                                if(unidades_tamanio[0] == 'K' || unidades_tamanio[0] == 'M'){
+                                    break;
+                                }else{
+                                    printf("Comando invalido, las unidades de tamaño deben ser en Megabytes (M) o en kilobytes(K).\n");
+                                    unidades_tamanio[0] = ' ';
+                                    break;
+                                }
                             }
-                            parametro2[contador] = comando[i];
+                            unidades_tamanio[contador] = comando[i];
                             contador++;
                             i++;
                         }
@@ -89,7 +119,7 @@ int main() {
                                     i++;
                                     break;
                                 }
-                                parametro3[contador] = comando[i];
+                                path[contador] = comando[i];
                                 contador++;
                                 i++;
                             }
@@ -106,15 +136,15 @@ int main() {
                             while (comando[i] != '-') {
                                 if (comando[i] == '"') {
                                     i++;
-                                    if(parametro4[contador - 4] == '.' && parametro4[contador - 3] == 'D' && parametro4[contador - 2] == 'S' && parametro4[contador - 1] == 'K'){
+                                    if (nombre[contador - 4] == '.' && nombre[contador - 3] == 'D' && nombre[contador - 2] == 'S' && nombre[contador - 1] == 'K') {
                                         break;
-                                    }else{
+                                    } else {
                                         printf("Comando invalido debe de escribir el nombre del disco con extension .dsk.\n");
-                                        parametro4[0] = ' ';
+                                        nombre[0] = ' ';
                                         break;
                                     }
                                 }
-                                parametro4[contador] = comando[i];
+                                nombre[contador] = comando[i];
                                 contador++;
                                 i++;
                             }
@@ -122,30 +152,243 @@ int main() {
                             estado = 11; //Estado de error
                         }
                     } else {
-                        if (parametro1[0] == ' ') {// == 'N' && parametro1[1] == 'a' && parametro1[2] == 'd' && parametro1[3] == 'a'){
+                        if (tamanio[0] == ' ') {// == 'N' && parametro1[1] == 'a' && parametro1[2] == 'd' && parametro1[3] == 'a'){
                             printf("Comando invalido debe de escribir el tamaño del disco.\n");
                             fin = 0;
                             aceptar = 0;
                         }
-                        if (parametro2[0] == ' ') {// == 'N' && parametro2[1] == 'a' && parametro2[2] == 'd' && parametro2[3] == 'a'){
+                        if (unidades_tamanio[0] == ' ') {// == 'N' && parametro2[1] == 'a' && parametro2[2] == 'd' && parametro2[3] == 'a'){
                             printf("No se especifico la unidad de tamaño, el disco se creara en Megabytes.\n");
-                            parametro2[0] = 'M';
+                            unidades_tamanio[0] = 'M';
                         }
-                        if (parametro3[0] == ' ') {// == 'N' && parametro3[1] == 'a' && parametro3[2] == 'd' && parametro3[3] == 'a'){
+                        if (path[0] == ' ') {// == 'N' && parametro3[1] == 'a' && parametro3[2] == 'd' && parametro3[3] == 'a'){
                             printf("Comando invalido debe de escribir el path de almacenamiento del disco.\n");
                             fin = 0;
                             aceptar = 0;
                         }
-                        if (parametro4[0] == ' ') {// == 'N' && parametro4[1] == 'a' && parametro4[2] == 'd' && parametro4[3] == 'a'){
+                        if (nombre[0] == ' ') {// == 'N' && parametro4[1] == 'a' && parametro4[2] == 'd' && parametro4[3] == 'a'){
                             printf("Comando invalido debe de escribir el nombre del disco.\n");
                             fin = 0;
                             aceptar = 0;
                         }
                         if (aceptar == 1) {
-                            printf("Paramentro 1: %s\n", parametro1);
-                            printf("Paramentro 2: %s\n", parametro2);
-                            printf("Paramentro 3: %s\n", parametro3);
-                            printf("Paramentro 4: %s\n", parametro4);
+                            printf("Paramentro 1: %s\n", tamanio);
+                            printf("Paramentro 2: %s\n", unidades_tamanio);
+                            printf("Paramentro 3: %s\n", path);
+                            printf("Paramentro 4: %s\n", nombre);
+                            //llamar al metodo para crear el disco
+                            fin = 0;
+                        }
+                    }
+                    break;
+                case 2:
+                    if (comando[i] == ' ' || comando[i] == '\\' || comando[i] == '\n') {
+                        estado = 2;
+                        i++;
+                    } else if (comando[i] == '-' && comando[i + 1] == 'P' && comando[i + 2] == 'A' && comando[i + 3] == 'T' && comando[i + 4] == 'H' && comando[i + 5] == ':' && comando[i + 6] == ':') {
+                        //printf("Comando rmdisk -path::\n");
+                        estado = 2;
+                        i = i + 7;
+                        if (comando[i] == '"') {
+                            i++;
+                            int contador = 0;
+                            while (comando[i] != '-') {
+                                if (comando[i] == '"') {
+                                    i++;
+                                    if (tamanio[contador - 4] == '.' && tamanio[contador - 3] == 'D' && tamanio[contador - 2] == 'S' && tamanio[contador - 1] == 'K') {
+                                        break;
+                                    } else {
+                                        printf("Comando invalido debe de escribir el nombre del disco con extension .dsk.\n");
+                                        tamanio[0] = ' ';
+                                        break;
+                                    }
+                                }
+                                tamanio[contador] = comando[i];
+                                contador++;
+                                i++;
+                            }
+                        } else {
+                            estado = 11; //Estado de error
+                        }
+                    } else {
+                        if (tamanio[0] == ' ') {
+                            printf("Comando invalido debe de escribir el path de almacenamiento del disco.\n");
+                            fin = 0;
+                            aceptar = 0;
+                        }
+                        if (aceptar == 1) {
+                            printf("Esta seguro que desea eliminar S/N\n");
+                            limpiar(comando);
+                            fgets(comando, 100, stdin);
+                            strcat(comando, " ");
+                            Todo_a_Mayusculas(comando);
+                            if(comando[0] == 'S'){
+                                printf("Paramentro 1: %s\n", tamanio);
+                                //llamar al metodo eliminar disco
+                                fin = 0;
+                            }
+                            if(comando[0] == 'N'){
+                                fin = 0;
+                            }
+                        }
+                    }
+                    break;
+                case 3:
+                    if (comando[i] == ' ' || comando[i] == '\\' || comando[i] == '\n') {
+                        estado = 3;
+                        i++;
+                    } else if (comando[i] == '-' && comando[i + 1] == 'S' && comando[i + 2] == 'I' && comando[i + 3] == 'Z' && comando[i + 4] == 'E' && comando[i + 5] == ':' && comando[i + 6] == ':') {
+                        //printf("Comando fdisk -size::\n");
+                        estado = 3;
+                        i = i + 7;
+                        int contador = 0;
+                        while (comando[i] != ' ') {
+                            if (comando[i] == '-') {
+                                break;
+                            }
+                            tamanio[contador] = comando[i];
+                            contador++;
+                            i++;
+                        }
+                    } else if (comando[i] == '+' && comando[i + 1] == 'U' && comando[i + 2] == 'N' && comando[i + 3] == 'I' && comando[i + 4] == 'T' && comando[i + 5] == ':' && comando[i + 6] == ':') {
+                        //printf("Comando fdisk +Unit::\n");
+                        estado = 3;
+                        i = i + 7;
+                        int contador = 0;
+                        while (comando[i] != ' ') {
+                            if (comando[i] == '-') {
+                                if(unidades_tamanio[0] == 'B' || unidades_tamanio[0] == 'K' || unidades_tamanio[0] == 'M'){
+                                    break;
+                                }else{
+                                    printf("Comando invalido, las unidades de tamaño deben ser en Megabytes (M) o en kilobytes(K) o en bytes(B).\n");
+                                    unidades_tamanio[0] = ' ';
+                                    break;
+                                }
+                            }
+                            unidades_tamanio[contador] = comando[i];
+                            contador++;
+                            i++;
+                        }
+                    } else if (comando[i] == '-' && comando[i + 1] == 'P' && comando[i + 2] == 'A' && comando[i + 3] == 'T' && comando[i + 4] == 'H' && comando[i + 5] == ':' && comando[i + 6] == ':') {
+                        //printf("Comando fdisk -path::\n");
+                        estado = 3;
+                        i = i + 7;
+                        if (comando[i] == '"') {
+                            i++;
+                            int contador = 0;
+                            while (comando[i] != '-') {
+                                if (comando[i] == '"') {
+                                    i++;
+                                    break;
+                                }
+                                path[contador] = comando[i];
+                                contador++;
+                                i++;
+                            }
+                        } else {
+                            estado = 11; //Estado de error
+                        }
+                    } else if (comando[i] == '-' && comando[i + 1] == 'N' && comando[i + 2] == 'A' && comando[i + 3] == 'M' && comando[i + 4] == 'E' && comando[i + 5] == ':' && comando[i + 6] == ':') {
+                        //printf("Comando fdisk -name::\n");
+                        estado = 3;
+                        i = i + 7;
+                        if (comando[i] == '"') {
+                            i++;
+                            int contador = 0;
+                            while (comando[i] != '-') {
+                                if (comando[i] == '"') {
+                                    i++;
+                                    if (nombre[contador - 4] == '.' && nombre[contador - 3] == 'D' && nombre[contador - 2] == 'S' && nombre[contador - 1] == 'K') {
+                                        break;
+                                    } else {
+                                        printf("Comando invalido debe de escribir el nombre del disco con extension .dsk.\n");
+                                        nombre[0] = ' ';
+                                        break;
+                                    }
+                                }
+                                nombre[contador] = comando[i];
+                                contador++;
+                                i++;
+                            }
+                        } else {
+                            estado = 11; //Estado de error
+                        }
+                    }else if (comando[i] == '+' && comando[i + 1] == 'T' && comando[i + 2] == 'Y' && comando[i + 3] == 'P' && comando[i + 4] == 'E' && comando[i + 5] == ':' && comando[i + 6] == ':') {
+                        //printf("Comando fdisk -type::\n");
+                        estado = 3;
+                        i = i + 7;
+                        int contador = 0;
+                        while (comando[i] != ' ') {
+                            if (comando[i] == '-') {
+                                if(tipo[0] == 'P' || tipo[0] == 'E' || tipo[0] == 'L'){
+                                    break;
+                                }else{
+                                    printf("Comando invalido, los tipos de discos deben ser Primarias (P) o Extendidas (E) o Logicas (L).\n");
+                                    tipo[0] = ' ';
+                                    break;
+                                }
+                            }
+                            tipo[contador] = comando[i];
+                            contador++;
+                            i++;
+                        }
+                    }else if (comando[i] == '+' && comando[i + 1] == 'F' && comando[i + 2] == 'I' && comando[i + 3] == 'T' && comando[i + 4] == ':' && comando[i + 5] == ':') {
+                        //printf("Comando fdisk -type::\n");
+                        estado = 3;
+                        i = i + 6;
+                        int contador = 0;
+                        while (comando[i] != ' ') {
+                            if (comando[i] == '-') {
+                                if((ajuste[0] == 'B' && ajuste[1] == 'F' ) || (ajuste[0] == 'F' && ajuste[1] == 'F' ) || (ajuste[0] == 'W' && ajuste[1] == 'F' )){
+                                    break;
+                                }else{
+                                    printf("Comando invalido, los tipos de ajustes deben ser: Mejor Ajuste (BF) o Primer Ajuste (FF) o Pero Ajuste (WF).\n");
+                                    ajuste[0] = ' ';
+                                    break;
+                                }
+                            }
+                            ajuste[contador] = comando[i];
+                            contador++;
+                            i++;
+                        }
+                    } else {
+                        if (tamanio[0] == ' ') {// == 'N' && parametro1[1] == 'a' && parametro1[2] == 'd' && parametro1[3] == 'a'){
+                            printf("Comando invalido debe de escribir el tamaño del disco.\n");
+                            fin = 0;
+                            aceptar = 0;
+                        }
+                        if (unidades_tamanio[0] == ' ') {// == 'N' && parametro2[1] == 'a' && parametro2[2] == 'd' && parametro2[3] == 'a'){
+                            printf("No se especifico la unidad de tamaño, el disco se creara en Megabytes.\n");
+                            unidades_tamanio[0] = 'M';
+                        }
+                        if (path[0] == ' ') {// == 'N' && parametro3[1] == 'a' && parametro3[2] == 'd' && parametro3[3] == 'a'){
+                            printf("Comando invalido debe de escribir el path de almacenamiento del disco.\n");
+                            fin = 0;
+                            aceptar = 0;
+                        }
+                        if (nombre[0] == ' ') {// == 'N' && parametro4[1] == 'a' && parametro4[2] == 'd' && parametro4[3] == 'a'){
+                            printf("Comando invalido debe de escribir el nombre del disco.\n");
+                            fin = 0;
+                            aceptar = 0;
+                        }
+                        if (tipo[0] == ' ') {// == 'N' && parametro4[1] == 'a' && parametro4[2] == 'd' && parametro4[3] == 'a'){
+                            printf("No se especifico el tipo de particion, se creara como primaria.\n");
+                            tipo[0] == 'P';
+                            fin = 0;
+                            aceptar = 0;
+                        }
+                        if (ajuste[0] == ' ') {// == 'N' && parametro4[1] == 'a' && parametro4[2] == 'd' && parametro4[3] == 'a'){
+                            printf("No se especifico el ajuste para asignar el espacio, sera el peor ajuste.\n");
+                            ajuste[0] == 'W';
+                            ajuste[1] == 'F';
+                            fin = 0;
+                            aceptar = 0;
+                        }
+                        if (aceptar == 1) {
+                            printf("Paramentro 1: %s\n", tamanio);
+                            printf("Paramentro 2: %s\n", unidades_tamanio);
+                            printf("Paramentro 3: %s\n", path);
+                            printf("Paramentro 4: %s\n", nombre);
                             //llamar al metodo para crear el disco
                             fin = 0;
                         }
@@ -177,9 +420,9 @@ void Todo_a_Mayusculas(char a_mayusculas[]) {
     }
 }
 
-void limpiar(char a_limpiar[]){
+void limpiar(char a_limpiar[]) {
     int i = 0;
-    for(i = 0; i < strlen(a_limpiar); i++){
+    for (i = 0; i < strlen(a_limpiar); i++) {
         a_limpiar[i] = ' ';
     }
 }
