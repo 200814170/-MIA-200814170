@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 
 char comando[100]; //..........................comando de entrada
@@ -15,25 +17,25 @@ char ajuste[100] = " "; //......................ajuste para la particion, primer
 char delete[100] = " "; //......................borrar particion
 char add[100] = " "; //.........................agregar espacio a la particion
 char id[100] = " "; //..........................id del disco, cuando este se monta
+char buffer[1];
 
 //Situaciones del analizador
 int salida = 1; //.............................Permanecia en el sistema; 0 = salir, 1 = dentro
 int aceptar = 1; //............................aceptacion del analizador de comando;
 int es_delete = 1; //..........................si se esta usando delete en fdisk; 1 = desactivado, 0 = activo
 int es_add = 1; //.............................si se esta usando add en fdisk; 1 = desactivado, 0 = activo
+int contador_archivo = 0;
 
-typedef struct PARTICION
-{
+typedef struct PARTICION {
     char part_status;
     char part_type;
     char part_fit;
     int part_start;
     int part_size;
     char part_name[16];
-}particion;
+} particion;
 
-typedef struct MBR
-{
+typedef struct MBR {
     int mbr_tamanio;
     timer_t mbr_fecha_creacion;
     int mbr_disk_signature;
@@ -41,11 +43,11 @@ typedef struct MBR
     particion mbr_partition_2;
     particion mbr_partition_3;
     particion mbr_partition_4;
-}mbr;
-
+} mbr;
 
 int main() {
 
+    reporte_MBR("uno", "dos");
     while (salida != 0) {
         printf("\n**************** PROYECTO MANEJO E IMPLEMENTACION DE ARCHIVOS**************** \n");
         printf("Ingrese el comando:\n");
@@ -156,6 +158,17 @@ void analizador(char a_analizar[]) {
                     estado = 6;
                     i = i + 4;
                     limpiar(path);
+                    aceptar = 1;
+                    //rep
+                } else if ((a_analizar[i] == 'r' || a_analizar[i] == 'R') &&
+                        (a_analizar[i + 1] == 'e' || a_analizar[i + 1] == 'E') &&
+                        (a_analizar[i + 2] == 'p' || a_analizar[i + 2] == 'P')) {
+                    printf("Comando rep\n");
+                    estado = 8;
+                    i = i + 3;
+                    limpiar(nombre);
+                    limpiar(path);
+                    limpiar(id);
                     aceptar = 1;
                     //salir
                 } else if ((a_analizar[i] == 's' || a_analizar[i] == 'S') &&
@@ -289,7 +302,7 @@ void analizador(char a_analizar[]) {
                         printf("Paramentro 3: %s\n", path);
                         printf("Paramentro 4: %s\n", nombre);
                         //llamar al metodo para crear el disco nuevo
-                        printf("Se creo el disco %s satisfactoriamente.\n");
+                        Nuevo_disco(tamanio, unidades_tamanio, path, nombre);
                         fin = 0;
                     }
                 }
@@ -794,6 +807,88 @@ void analizador(char a_analizar[]) {
                     fin = 0;
                 }
                 break;
+            case 8:
+                if (a_analizar[i] == ' ' || a_analizar[i] == '\\' || a_analizar[i] == '\n') {
+                    estado = 8;
+                    i++;
+                } else if (a_analizar[i] == '-' && (a_analizar[i + 1] == 'I' || a_analizar[i + 1] == 'i') && (a_analizar[i + 2] == 'D' || a_analizar[i + 2] == 'd') && (a_analizar[i + 3] == '1' || a_analizar[i + 3] == '2'
+                        || a_analizar[i + 3] == '3' || a_analizar[i + 3] == '4' || a_analizar[i + 3] == '5' || a_analizar[i + 3] == '6'
+                        || a_analizar[i + 3] == '7' || a_analizar[i + 3] == '8' || a_analizar[i + 3] == '9') && a_analizar[i + 4] == ':' && a_analizar[i + 5] == ':') {
+                    //printf("Comando rep -id::)
+                    i = i + 6;
+                    estado = 8;
+                    int contador = 0;
+                    while (a_analizar[i] != ' ') {
+                        id[contador] = a_analizar[i];
+                        contador++;
+                        i++;
+                    }
+                } else if (a_analizar[i] == '-' && (a_analizar[i + 1] == 'P' || a_analizar[i + 1] == 'p') && (a_analizar[i + 2] == 'A' || a_analizar[i + 2] == 'a') && (a_analizar[i + 3] == 'T' || a_analizar[i + 3] == 't') && (a_analizar[i + 4] == 'H' || a_analizar[i + 4] == 'h') && a_analizar[i + 5] == ':' && a_analizar[i + 6] == ':') {
+                    //printf("Comando rep -path::\n");
+                    estado = 8;
+                    i = i + 7;
+                    if (a_analizar[i] == '"') {
+                        i++;
+                        int contador = 0;
+                        while (a_analizar[i] != '-') {
+                            if (a_analizar[i] == '"') {
+                                i++;
+                                break;
+                            }
+                            path[contador] = a_analizar[i];
+                            contador++;
+                            i++;
+                        }
+                    } else {
+                        estado = 11; //Estado de error
+                    }
+                } else if (a_analizar[i] == '-' && (a_analizar[i + 1] == 'N' || a_analizar[i + 1] == 'n') && (a_analizar[i + 2] == 'A' || a_analizar[i + 2] == 'a') && (a_analizar[i + 3] == 'M' || a_analizar[i + 3] == 'm') && (a_analizar[i + 4] == 'E' || a_analizar[i + 4] == 'e') && a_analizar[i + 5] == ':' && a_analizar[i + 6] == ':') {
+                    //printf("Comando rep -name::\n");
+                    estado = 8;
+                    i = i + 7;
+                    if (a_analizar[i] == '"') {
+                        i++;
+                        int contador = 0;
+                        while (a_analizar[i] != '-') {
+                            if (a_analizar[i] == '"') {
+                                i++;
+                                break;
+                            }
+                            nombre[contador] = a_analizar[i];
+                            contador++;
+                            i++;
+                        }
+                    } else {
+                        estado = 11; //Estado de error
+                    }
+                } else {
+                    if (id[0] == ' ') {
+                        printf("Comando invalido debe de escribir el id.\n");
+                        fin = 0;
+                        aceptar = 0;
+                    }
+                    if (path[0] == ' ') {
+                        printf("Comando invalido debe de escribir el path.\n");
+                        fin = 0;
+                        aceptar = 0;
+                    }
+                    if (nombre[0] == ' ') {
+                        printf("Comando invalido debe de escribir el nombre.\n");
+                        fin = 0;
+                        aceptar = 0;
+                    }
+                    if (aceptar == 1) {
+                        printf("Paramentro 1: %s\n", nombre);
+                        printf("Paramentro 2: %s\n", path);
+                        printf("Paramentro 3: %s\n", id);
+                        if((nombre[0] == 'm' || nombre[0] == 'M') && (nombre[1] == 'b' || nombre[1] == 'B') && (nombre[2] == 'r' || nombre[2] == 'R')){
+                            //llamar al metodo que genera el reporte del MBR
+                            reporte_MBR(path, nombre);
+                        }
+                        fin = 0;
+                    }
+                }
+                break;
             case 10:
                 fin = 0;
                 salida = 0;
@@ -829,7 +924,7 @@ void limpiar(char a_limpiar[]) {
 
 //metodo que verifica si existe el archivo en el path
 
-int cargar_script(char a_buscar[]) {
+void cargar_script(char direccion_archivo[]) {
     FILE * archivo;
     char caracter;
     char comando_ejecutar[100] = " ";
@@ -839,7 +934,7 @@ int cargar_script(char a_buscar[]) {
     int contador = 0;
     int contador_transacciones = 1;
 
-    archivo = fopen(a_buscar, "r");
+    archivo = fopen(direccion_archivo, "r");
     if (archivo == NULL) {
         printf("\nEl archivo no se pudo abrir, puede que la ruta no exista o bien esta mal escrita. \n\n");
     } else {
@@ -876,12 +971,77 @@ int cargar_script(char a_buscar[]) {
     fclose(archivo);
 }
 
-void Nuevo_disco(char tamanio[], char unidades_tamanio[], char path[], char nombre[]){
+void Nuevo_disco(char tamanio[], char unidades_tamanio[], char path[], char nombre[]) {
+
+    char path_completo[100];
+    sprintf(path_completo, "%s%s", path, nombre);
+
+    struct stat datosFichero;
+    if (lstat(path, &datosFichero) == -1) {
+        printf("El directorio %s no existia, se creo.\n", path);
+        char temporal[100];
+        sprintf(temporal, "%s%s", "mkdir ", path);
+        char * temp = &temporal[0];
+        system(temp);
+    }
 
     mbr nuevo_disco;
     nuevo_disco.mbr_disk_signature = 1;
-    nuevo_disco.mbr_fecha_creacion = 12/12/2016;
-    nuevo_disco.mbr_tamanio = tamanio;
+    //nuevo_disco.mbr_fecha_creacion = 12 / 12 / 2016;
+    nuevo_disco.mbr_tamanio = atoi(tamanio);
+    nuevo_disco.mbr_partition_1.part_size = 0;
+    nuevo_disco.mbr_partition_2.part_size = 0;
+    nuevo_disco.mbr_partition_3.part_size = 0;
+    nuevo_disco.mbr_partition_4.part_size = 0;
+
+
+    FILE *f = fopen(path_completo, "w+b");
+    if (unidades_tamanio[0] == 'k' || unidades_tamanio[0] == 'K') {
+        for (contador_archivo = 0; contador_archivo < atoi(tamanio); contador_archivo++)
+            fwrite(buffer, sizeof (buffer), 1024, f);
+    }
+
+    if (unidades_tamanio[0] == 'm' || unidades_tamanio[0] == 'M') {
+        for (contador_archivo = 0; contador_archivo < atoi(tamanio) * 1024; contador_archivo++)
+            fwrite(buffer, sizeof (buffer), 1024, f);
+    }
+
+    rewind(f);
+    fwrite(&nuevo_disco, sizeof (nuevo_disco), 1, f);
+    fclose(f);
+    printf("Se creo el disco %s satisfactoriamente en la diereccion %s%s.\n", path, nombre);
+
 }
 
+void reporte_MBR(char path[], char nombre[]){
+    char path_completo[100];
+    sprintf(path_completo, "%s%s", path, nombre);
 
+    struct stat datosFichero;
+    if (lstat(path, &datosFichero) == -1) {
+        printf("El directorio %s no existia, se creo.\n", path);
+        char temporal[100];
+        sprintf(temporal, "%s%s", "mkdir ", path);
+        char * temp = &temporal[0];
+        system(temp);
+    }
+
+    mbr temporal;
+
+    FILE *f = fopen("/home/tony/archivos/Disco4.dsk", "rb+");
+    rewind(f);
+    fread(&temporal, sizeof (temporal), 1, f);
+    fclose(f);
+
+    printf("Nombre ---------------------- Valor\n");
+    printf("mbr_tamaño ------------------ %d\n", temporal.mbr_tamanio);
+    //printf("mbr_fecha_creacion ---------- %s", temporal.mbr_fecha_creacion); //Tengo que averiguar como imprimirlo y guardalor
+    printf("mbr_disk_signature ---------- %d\n", temporal.mbr_disk_signature);
+    printf("part_status_1 --------------- %d\n", temporal.mbr_partition_1.part_size);
+    printf("part_status_2 --------------- %d\n", temporal.mbr_partition_2.part_size);
+    printf("part_status_3 --------------- %d\n", temporal.mbr_partition_3.part_size);
+    printf("part_status_4 --------------- %d\n", temporal.mbr_partition_4.part_size);
+
+
+
+}
