@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 
 
-char comando[100]; //..........................comando de entrada
+char comando[150]; //..........................comando de entrada
 
 //Parametros que piden los diferentes comandos
 char tamanio[100] = " "; //.....................tamaño de disco o bien particiones
@@ -17,7 +17,8 @@ char ajuste[100] = " "; //......................ajuste para la particion, primer
 char delete[100] = " "; //......................borrar particion
 char add[100] = " "; //.........................agregar espacio a la particion
 char id[100] = " "; //..........................id del disco, cuando este se monta
-char buffer[1];
+char basura[1];
+char ids[1000];
 
 //Situaciones del analizador
 int salida = 1; //.............................Permanecia en el sistema; 0 = salir, 1 = dentro
@@ -27,33 +28,48 @@ int es_add = 1; //.............................si se esta usando add en fdisk; 1
 int contador_archivo = 0;
 
 typedef struct PARTICION {
-    char part_status;
-    char part_type;
-    char part_fit;
-    int part_start;
-    int part_size;
-    char part_name[16];
+    char part_status; //1
+    char part_type; //1
+    char part_fit; //1
+    int part_start; //4
+    int part_size; //4
+    char part_name[16]; //16
 } particion;
 
 typedef struct MBR {
-    int mbr_tamanio;
-    timer_t mbr_fecha_creacion;
-    int mbr_disk_signature;
-    particion mbr_partition_1;
-    particion mbr_partition_2;
-    particion mbr_partition_3;
-    particion mbr_partition_4;
+    int mbr_tamanio; //4 bytes
+    timer_t mbr_fecha_creacion; //8 bytes
+    int mbr_disk_signature; //4
+    particion mbr_partition_1; //27
+    particion mbr_partition_2; //27
+    particion mbr_partition_3; //27
+    particion mbr_partition_4; //27
 } mbr;
+
+typedef struct nodo_lista {
+    char id[100];
+    char numero_particion[10];
+    char letra;
+    char path[100];
+    char nombre[100];
+    struct nodo * siguiente;
+} LISTA;
+
+struct nodo_lista * primero;
+struct nodo_lista * ultimo;
+
+struct nodo_lista * primer_id;
+struct nodo_lista * ultimo_id;
 
 int main() {
 
-    reporte_MBR("uno", "dos");
+    inicializar_lista();
     while (salida != 0) {
         printf("\n**************** PROYECTO MANEJO E IMPLEMENTACION DE ARCHIVOS**************** \n");
         printf("Ingrese el comando:\n");
         limpiar(comando);
         //gets(comando);
-        fgets(comando, 100, stdin);
+        fgets(comando, 150, stdin);
 
         //printf("Comando escrito: %s\n", comando);
         strcat(comando, " "); //se le agrega al final para que se puedan salir algunos ciclos que recolectan parametros
@@ -403,6 +419,14 @@ void analizador(char a_analizar[]) {
                         int contador = 0;
                         while (a_analizar[i] != '-') {
                             if (a_analizar[i] == '"') {
+                                if (path[contador - 4] == '.' && (path[contador - 3] == 'D' || path[contador - 3] == 'd') && (path[contador - 2] == 'S' || path[contador - 2] == 's') && (path[contador - 1] == 'K' || path[contador - 1] == 'k')) {
+                                    i++;
+                                    break;
+                                } else {
+                                    printf("Comando invalido debe de escribir el path, con el nombre del disco con extension .dsk.\n");
+                                    path[0] = ' ';
+                                    break;
+                                }
                                 i++;
                                 break;
                             }
@@ -645,7 +669,8 @@ void analizador(char a_analizar[]) {
                             printf("Paramentro 4: %s\n", nombre);
                             printf("Paramentro 5: %s\n", tipo);
                             printf("Paramentro 6: %s\n", ajuste);
-                            //llamar al metodo para crear particiones
+                            //llamar al metodo para crear particiones nuevas
+                            particion_nueva(tamanio, unidades_tamanio, path, nombre, ajuste, tipo);
                             fin = 0;
                         }
                     }
@@ -708,7 +733,15 @@ void analizador(char a_analizar[]) {
                         printf("Paramentro 1: %s\n", path);
                         printf("Paramentro 2: %s\n", nombre);
                         //llamar al metodo para montar las particiones
+                        Montar_particion(path, nombre);
                         fin = 0;
+                    } else {
+                        if (primer_id == NULL) {
+                            printf("Aun no se han montado particiones.\n");
+                        } else {
+                            printf("Particiones montadas hasta el momento:\n");
+                            imprimir_ids();
+                        }
                     }
                 }
                 break;
@@ -811,11 +844,9 @@ void analizador(char a_analizar[]) {
                 if (a_analizar[i] == ' ' || a_analizar[i] == '\\' || a_analizar[i] == '\n') {
                     estado = 8;
                     i++;
-                } else if (a_analizar[i] == '-' && (a_analizar[i + 1] == 'I' || a_analizar[i + 1] == 'i') && (a_analizar[i + 2] == 'D' || a_analizar[i + 2] == 'd') && (a_analizar[i + 3] == '1' || a_analizar[i + 3] == '2'
-                        || a_analizar[i + 3] == '3' || a_analizar[i + 3] == '4' || a_analizar[i + 3] == '5' || a_analizar[i + 3] == '6'
-                        || a_analizar[i + 3] == '7' || a_analizar[i + 3] == '8' || a_analizar[i + 3] == '9') && a_analizar[i + 4] == ':' && a_analizar[i + 5] == ':') {
+                } else if (a_analizar[i] == '-' && (a_analizar[i + 1] == 'I' || a_analizar[i + 1] == 'i') && (a_analizar[i + 2] == 'D' || a_analizar[i + 2] == 'd') && a_analizar[i + 3] == ':' && a_analizar[i + 4] == ':') {
                     //printf("Comando rep -id::)
-                    i = i + 6;
+                    i = i + 5;
                     estado = 8;
                     int contador = 0;
                     while (a_analizar[i] != ' ') {
@@ -861,6 +892,7 @@ void analizador(char a_analizar[]) {
                     } else {
                         estado = 11; //Estado de error
                     }
+
                 } else {
                     if (id[0] == ' ') {
                         printf("Comando invalido debe de escribir el id.\n");
@@ -881,9 +913,10 @@ void analizador(char a_analizar[]) {
                         printf("Paramentro 1: %s\n", nombre);
                         printf("Paramentro 2: %s\n", path);
                         printf("Paramentro 3: %s\n", id);
-                        if((nombre[0] == 'm' || nombre[0] == 'M') && (nombre[1] == 'b' || nombre[1] == 'B') && (nombre[2] == 'r' || nombre[2] == 'R')){
+                        if ((nombre[0] == 'm' || nombre[0] == 'M') && (nombre[1] == 'b' || nombre[1] == 'B') && (nombre[2] == 'r' || nombre[2] == 'R')) {
                             //llamar al metodo que genera el reporte del MBR
-                            reporte_MBR(path, nombre);
+                            reporte_MBR(path, id);
+                            //reporte_MBR("/home/tony/disquitos/Disco1.dsk","mbr");
                         }
                         fin = 0;
                     }
@@ -998,12 +1031,12 @@ void Nuevo_disco(char tamanio[], char unidades_tamanio[], char path[], char nomb
     FILE *f = fopen(path_completo, "w+b");
     if (unidades_tamanio[0] == 'k' || unidades_tamanio[0] == 'K') {
         for (contador_archivo = 0; contador_archivo < atoi(tamanio); contador_archivo++)
-            fwrite(buffer, sizeof (buffer), 1024, f);
+            fwrite(basura, sizeof (basura), 1024, f);
     }
 
     if (unidades_tamanio[0] == 'm' || unidades_tamanio[0] == 'M') {
-        for (contador_archivo = 0; contador_archivo < atoi(tamanio) * 1024; contador_archivo++)
-            fwrite(buffer, sizeof (buffer), 1024, f);
+        for (contador_archivo = 0; contador_archivo < (atoi(tamanio) * 1024); contador_archivo++)
+            fwrite(basura, sizeof (basura), 1024, f);
     }
 
     rewind(f);
@@ -1013,9 +1046,7 @@ void Nuevo_disco(char tamanio[], char unidades_tamanio[], char path[], char nomb
 
 }
 
-void reporte_MBR(char path[], char nombre[]){
-    char path_completo[100];
-    sprintf(path_completo, "%s%s", path, nombre);
+void particion_nueva(char tamanio[], char unidades_tamanio[], char path[], char nombre[], char fit[], char type[]) {
 
     struct stat datosFichero;
     if (lstat(path, &datosFichero) == -1) {
@@ -1026,22 +1057,503 @@ void reporte_MBR(char path[], char nombre[]){
         system(temp);
     }
 
-    mbr temporal;
 
-    FILE *f = fopen("/home/tony/archivos/Disco4.dsk", "rb+");
-    rewind(f);
-    fread(&temporal, sizeof (temporal), 1, f);
+    mbr temporal1;
+
+    FILE * f = fopen(path, "rb+");
+
+    fseek(f, 0, SEEK_SET);
+    //rewind(f);
+    fread(&temporal1, sizeof (temporal1), 1, f);
     fclose(f);
 
-    printf("Nombre ---------------------- Valor\n");
-    printf("mbr_tamaño ------------------ %d\n", temporal.mbr_tamanio);
-    //printf("mbr_fecha_creacion ---------- %s", temporal.mbr_fecha_creacion); //Tengo que averiguar como imprimirlo y guardalor
-    printf("mbr_disk_signature ---------- %d\n", temporal.mbr_disk_signature);
-    printf("part_status_1 --------------- %d\n", temporal.mbr_partition_1.part_size);
-    printf("part_status_2 --------------- %d\n", temporal.mbr_partition_2.part_size);
-    printf("part_status_3 --------------- %d\n", temporal.mbr_partition_3.part_size);
-    printf("part_status_4 --------------- %d\n", temporal.mbr_partition_4.part_size);
+    particion nueva_particion;
+
+    nueva_particion.part_status = '0'; //1 = activa, 0 = no activa;
+    nueva_particion.part_type = type[0]; //p = primaria, e = extendida
+
+    if ((fit[0] == 'B' || fit[0] == 'b')&&(fit[1] == 'F' || fit[1] == 'f')) {//1 = BF, 2 = FF, 3 = WF
+        nueva_particion.part_fit = '1';
+    } else if ((fit[0] == 'F' || fit[0] == 'f')&&(fit[1] == 'F' || fit[1] == 'f')) {
+        nueva_particion.part_fit = '2';
+    } else if ((fit[0] == 'W' || fit[0] == 'w')&&(fit[1] == 'F' || fit[1] == 'f')) {
+        nueva_particion.part_fit = '3';
+    }
+
+    nueva_particion.part_start = (int) sizeof (temporal1);
+    nueva_particion.part_size = atoi(tamanio);
+
+    if (temporal1.mbr_partition_1.part_size == 0) {//verifica si la particion 1 ya fue creada, si su tamaño = 0, aqui se crea la nueva particion
+        temporal1.mbr_partition_1.part_status = nueva_particion.part_status;
+        temporal1.mbr_partition_1.part_type = nueva_particion.part_type;
+        temporal1.mbr_partition_1.part_fit = nueva_particion.part_fit;
+        temporal1.mbr_partition_1.part_start = nueva_particion.part_start;
+        temporal1.mbr_partition_1.part_size = nueva_particion.part_size;
+
+        int contador = 0;
+        while (contador < 16) {
+            temporal1.mbr_partition_1.part_name[contador] = nombre[contador];
+            contador++;
+        }
+        FILE * f2 = fopen(path, "rb+");
+        rewind(f2);
+        fwrite(&temporal1, sizeof (temporal1), 1, f2);
+        fclose(f2);
+    } else if (temporal1.mbr_partition_2.part_size == 0) {//verifica si la particion 2 ya fue creada, si su tamaño = 0, aqui se crea la nueva particion
+        temporal1.mbr_partition_2.part_status = nueva_particion.part_status;
+        temporal1.mbr_partition_2.part_type = nueva_particion.part_type;
+        temporal1.mbr_partition_2.part_fit = nueva_particion.part_fit;
+        temporal1.mbr_partition_2.part_start = nueva_particion.part_start;
+        temporal1.mbr_partition_2.part_size = nueva_particion.part_size;
+
+        int contador = 0;
+        while (contador < 16) {
+            temporal1.mbr_partition_2.part_name[contador] = nombre[contador];
+            contador++;
+        }
+        FILE * f2 = fopen(path, "rb+");
+        rewind(f2);
+        fwrite(&temporal1, sizeof (temporal1), 1, f2);
+        fclose(f2);
+    } else if (temporal1.mbr_partition_3.part_size == 0) {//verifica si la particion 3 ya fue creada, si su tamaño = 0, aqui se crea la nueva particion
+        temporal1.mbr_partition_3.part_status = nueva_particion.part_status;
+        temporal1.mbr_partition_3.part_type = nueva_particion.part_type;
+        temporal1.mbr_partition_3.part_fit = nueva_particion.part_fit;
+        temporal1.mbr_partition_3.part_start = nueva_particion.part_start;
+        temporal1.mbr_partition_3.part_size = nueva_particion.part_size;
+
+        int contador = 0;
+        while (contador < 16) {
+            temporal1.mbr_partition_3.part_name[contador] = nombre[contador];
+            contador++;
+        }
+        FILE * f2 = fopen(path, "rb+");
+        rewind(f2);
+        fwrite(&temporal1, sizeof (temporal1), 1, f2);
+        fclose(f2);
+    } else if (temporal1.mbr_partition_4.part_size == 0) {//verifica si la particion 4 ya fue creada, si su tamaño = 0, aqui se crea la nueva particion
+        temporal1.mbr_partition_4.part_status = nueva_particion.part_status;
+        temporal1.mbr_partition_4.part_type = nueva_particion.part_type;
+        temporal1.mbr_partition_4.part_fit = nueva_particion.part_fit;
+        temporal1.mbr_partition_4.part_start = nueva_particion.part_start;
+        temporal1.mbr_partition_4.part_size = nueva_particion.part_size;
+
+        int contador = 0;
+        while (contador < 16) {
+            temporal1.mbr_partition_4.part_name[contador] = nombre[contador];
+            contador++;
+        }
+
+        FILE * f2 = fopen(path, "rb+");
+        rewind(f2);
+        fwrite(&temporal1, sizeof (temporal1), 1, f2);
+        fclose(f2);
+    }
 
 
+    //Lectura temporal en consola de como estan las particiones
+    mbr temporal3;
+    FILE *f3 = fopen(path, "rb+");
+    rewind(f3);
+    fread(&temporal3, sizeof (temporal3), 1, f3);
+    fclose(f3);
+
+    printf("\nNombre ---------------------- Valor\n");
+    printf("mbr_tamaño ------------------ %d\n", temporal3.mbr_tamanio);
+    //printf("mbr_fecha_creacion ---------- %s", temporal3.mbr_fecha_creacion);
+    printf("mbr_disk_signature ---------- %d\n", temporal3.mbr_disk_signature);
+
+    printf("\tpart_status_1 --------------- %c\n", temporal3.mbr_partition_1.part_status);
+    printf("\tpart_type_1 -----------------%c\n", temporal3.mbr_partition_1.part_type);
+    printf("\tpart_fit_1 -----------------%c\n", temporal3.mbr_partition_1.part_fit);
+    printf("\tpart_start_1 -----------------%d\n", temporal3.mbr_partition_1.part_start);
+    printf("\tpart_zise_1 -----------------%d\n", temporal3.mbr_partition_1.part_size);
+    printf("\tpart_name_1 -----------------%s\n", temporal3.mbr_partition_1.part_name);
+
+    printf("part_status_2 --------------- %d\n", temporal3.mbr_partition_2.part_size);
+
+    printf("\tpart_status_2 --------------- %c\n", temporal3.mbr_partition_2.part_status);
+    printf("\tpart_type_2 -----------------%c\n", temporal3.mbr_partition_2.part_type);
+    printf("\tpart_fit_2 -----------------%c\n", temporal3.mbr_partition_2.part_fit);
+    printf("\tpart_start_2 -----------------%d\n", temporal3.mbr_partition_2.part_start);
+    printf("\tpart_zise_2 -----------------%d\n", temporal3.mbr_partition_2.part_size);
+    printf("\tpart_name_2 -----------------%s\n", temporal3.mbr_partition_2.part_name);
+
+    printf("part_status_3 --------------- %d\n", temporal3.mbr_partition_3.part_size);
+
+    printf("\tpart_status_3 --------------- %c\n", temporal3.mbr_partition_3.part_status);
+    printf("\tpart_type_3 -----------------%c\n", temporal3.mbr_partition_3.part_type);
+    printf("\tpart_fit_3 -----------------%c\n", temporal3.mbr_partition_3.part_fit);
+    printf("\tpart_start_3 -----------------%d\n", temporal3.mbr_partition_3.part_start);
+    printf("\tpart_zise_3 -----------------%d\n", temporal3.mbr_partition_3.part_size);
+    printf("\tpart_name_3 -----------------%s\n", temporal3.mbr_partition_3.part_name);
+
+    printf("part_status_4 --------------- %d\n", temporal3.mbr_partition_4.part_size);
+
+    printf("\tpart_status_4 --------------- %c\n", temporal3.mbr_partition_4.part_status);
+    printf("\tpart_type_4 -----------------%c\n", temporal3.mbr_partition_4.part_type);
+    printf("\tpart_fit_4 -----------------%c\n", temporal3.mbr_partition_4.part_fit);
+    printf("\tpart_start_4 -----------------%d\n", temporal3.mbr_partition_4.part_start);
+    printf("\tpart_zise_4 -----------------%d\n", temporal3.mbr_partition_4.part_size);
+    printf("\tpart_name_4 -----------------%s\n", temporal3.mbr_partition_4.part_name);
+
+}
+
+void Montar_particion(char path[], char nombre[]) {
+    struct stat datosFichero;
+    if (lstat(path, &datosFichero) == -1) {
+        printf("El directorio %s no existe.\n", path);
+    } else {
+        int continuar = 1;
+        struct nodo_lista * temporal = primero;
+        while (temporal != NULL) {
+            int i = 0;
+            while (i < strlen(path)) {
+                if (temporal->path[i] == path[i]) {
+                    continuar = 1;
+                    i++;
+                } else {
+                    continuar = 0;
+                    i = strlen(path);
+                    if (temporal->path[0] == ' ') {
+                        strcpy(temporal->path, path);
+                        strcpy(temporal->nombre, nombre);
+                        break;
+                    }
+                }
+            }
+            if (continuar == 0) {
+                break;
+            } else {
+                temporal = temporal->siguiente;
+            }
+        }
+
+        struct nodo_lista * temporal_id = primer_id;
+        int ii = 0;
+        while (temporal_id != NULL) {
+            while (ii < strlen(path)) {
+                if (temporal_id->path[ii] == path[ii]) {
+                    continuar = 0;
+                    ii++;
+                } else {
+                    continuar = 1;
+                    break;
+                }
+            }
+            if (continuar == 0) {
+                break;
+            } else {
+                temporal_id = temporal_id->siguiente;
+            }
+        }
+
+        if (continuar == 0) {
+            int contador = 0;
+            while (contador < 11) {
+                if (temporal->numero_particion[contador] == ' ') {
+                    if (temporal->numero_particion[0] == ' ') {
+                        temporal->numero_particion[0] = 1;
+                    } else {
+                        temporal->numero_particion[contador] = (temporal->numero_particion[contador - 1]) + 1;
+                    }
+                    contador = temporal->numero_particion[contador];
+
+                    mbr temporal1;
+                    FILE * f = fopen(path, "rb+");
+                    fseek(f, 0, SEEK_SET);
+                    fread(&temporal1, sizeof (temporal1), 1, f);
+                    fclose(f);
+
+
+                    int i = 0;
+                    while (i < strlen(nombre)) {
+                        if (temporal1.mbr_partition_1.part_name[i] == nombre[i]) {
+                            continuar = 0;
+                            i++;
+                        } else {
+                            continuar = 1;
+                            break;
+                        }
+                    }
+
+                    if (continuar == 0) {
+                        temporal1.mbr_partition_1.part_status = '1';
+                        FILE * f2 = fopen(path, "rb+");
+                        rewind(f2);
+                        fwrite(&temporal1, sizeof (temporal1), 1, f2);
+                        fclose(f2);
+                        printf("Particion Montada, id: vd%c%d\n", temporal->letra, contador);
+                        sampar_id(path, nombre, temporal->letra, contador);
+                        break;
+                    }
+
+                    i = 0;
+                    while (i < strlen(nombre)) {
+                        if (temporal1.mbr_partition_2.part_name[i] == nombre[i]) {
+                            continuar = 0;
+                            i++;
+                        } else {
+                            continuar = 1;
+                            break;
+                        }
+                    }
+                    if (continuar == 0) {
+                        temporal1.mbr_partition_2.part_status = '1';
+                        FILE * f2 = fopen(path, "rb+");
+                        rewind(f2);
+                        fwrite(&temporal1, sizeof (temporal1), 1, f2);
+                        fclose(f2);
+                        printf("Particion Montada, id: vd%c%d\n", temporal->letra, contador);
+                        sampar_id(path, nombre, temporal->letra, contador);
+                        break;
+                    }
+
+                    i = 0;
+                    while (i < strlen(nombre)) {
+                        if (temporal1.mbr_partition_3.part_name[i] == nombre[i]) {
+                            continuar = 0;
+                            i++;
+                        } else {
+                            continuar = 1;
+                            break;
+                        }
+                    }
+
+                    if (continuar == 0) {
+                        temporal1.mbr_partition_3.part_status = '1';
+                        FILE * f2 = fopen(path, "rb+");
+                        rewind(f2);
+                        fwrite(&temporal1, sizeof (temporal1), 1, f2);
+                        fclose(f2);
+                        printf("Particion Montada, id: vd%c%d\n", temporal->letra, contador);
+                        sampar_id(path, nombre, temporal->letra, contador);
+                        break;
+                    }
+
+                    i = 0;
+                    while (i < strlen(nombre)) {
+                        if (temporal1.mbr_partition_4.part_name[i] == nombre[i]) {
+                            continuar = 0;
+                            i++;
+                        } else {
+                            continuar = 1;
+                            break;
+                        }
+                    }
+
+                    if (continuar == 0) {
+                        temporal1.mbr_partition_4.part_status = '1';
+                        FILE * f2 = fopen(path, "rb+");
+                        rewind(f2);
+                        fwrite(&temporal1, sizeof (temporal1), 1, f2);
+                        fclose(f2);
+                        printf("Particion Montada, id: vd%c%d\n", temporal->letra, contador);
+                        sampar_id(path, nombre, temporal->letra, contador);
+                        break;
+                    } else {
+                        printf("La particion ingresada no existe.\n");
+                    }
+                }
+                contador++;
+            }
+        }
+    }
+}
+
+void reporte_MBR(char path[], char id[]) {
+
+    char * cadena;
+    int continuar = 0;
+    struct nodo_lista * actual = primer_id;
+    while (actual != NULL) {
+        int contador = 0;
+        while (contador < strlen(id)) {
+            if (actual->id[contador] == id[contador]) {
+                continuar = 1;
+                contador++;
+                break;
+            } else {
+                continuar = 0;
+                break;
+            }
+        }
+        if (continuar == 1) {
+            mbr temporal3;
+            FILE *f3 = fopen(actual->path, "rb+");
+            rewind(f3);
+            fread(&temporal3, sizeof (temporal3), 1, f3);
+            fclose(f3);
+
+            FILE *fp;
+            fp = fopen("/home/tony/Escritorio/otra_tabla.dot", "w");
+
+            fputs("digraph Tabla { \n", fp);
+            fputs("node [shape=plaintext, fontsize=50];\n", fp);
+            fputs("{rank = same; \"MBR Disco1.dsk\";}\n", fp);
+            fputs("\"MBR Disco1.dsk\"  -> Nodo1[color = white];\n", fp);
+            fputs("Nodo1[shape=record, width= 6, fontsize=20, label = \"", fp);
+            fputs("{{Nombre|Valor}|", fp);
+            fputs("{mbr_tamaño|", fp);
+            fputs(temporal3.mbr_tamanio, fp);
+            //sprintf(cadena, "%d", temporal3.mbr_tamanio);
+            fputs(cadena, fp);
+            fputs("}{mbr_fecha_creacion|", fp);
+            sprintf(cadena, temporal3.mbr_fecha_creacion);
+            fputs(cadena, fp);
+            fputs("}{mbr_disk_signature|", fp);
+            sprintf(cadena, temporal3.mbr_disk_signature);
+            fputs(cadena, fp);
+            if(temporal3.mbr_partition_1.part_status == '1'){
+                fputs("}{part_status_1|", fp);
+                sprintf(cadena, temporal3.mbr_partition_1.part_status);
+                fputs(cadena, fp);
+                fputs("}{part_type_1|", fp);
+                sprintf(cadena, temporal3.mbr_partition_1.part_type);
+                fputs(cadena, fp);
+                fputs("}{part_fit_1|", fp);
+                sprintf(cadena, temporal3.mbr_partition_1.part_fit);
+                fputs(cadena, fp);
+                fputs("}{part_start_1|", fp);
+                sprintf(cadena, temporal3.mbr_partition_1.part_start);
+                fputs(cadena, fp);
+                fputs("}{part_size_1|", fp);
+                sprintf(cadena, temporal3.mbr_partition_1.part_size);
+                fputs(cadena, fp);
+                fputs("}{part_name_1|", fp);
+                sprintf(cadena, temporal3.mbr_partition_1.part_name);
+                fputs(cadena, fp);
+                fputs("}}", fp);
+            }
+            /*fputs("");
+            fputs("");
+            fputs("");
+            fputs("");
+            fputs("");
+            fputs("");
+            fputs("");*/
+
+            fclose(fp);
+
+
+
+            printf("\nNombre ---------------------- Valor\n");
+            printf("mbr_tamaño ------------------ %d\n", temporal3.mbr_tamanio);
+            //printf("mbr_fecha_creacion ---------- %s", temporal3.mbr_fecha_creacion);
+            printf("mbr_disk_signature ---------- %d\n", temporal3.mbr_disk_signature);
+
+            printf("\tpart_status_1 --------------- %c\n", temporal3.mbr_partition_1.part_status);
+            printf("\tpart_type_1 -----------------%c\n", temporal3.mbr_partition_1.part_type);
+            printf("\tpart_fit_1 -----------------%c\n", temporal3.mbr_partition_1.part_fit);
+            printf("\tpart_start_1 -----------------%d\n", temporal3.mbr_partition_1.part_start);
+            printf("\tpart_zise_1 -----------------%d\n", temporal3.mbr_partition_1.part_size);
+            printf("\tpart_name_1 -----------------%s\n", temporal3.mbr_partition_1.part_name);
+
+            printf("part_status_2 --------------- %d\n", temporal3.mbr_partition_2.part_size);
+
+            printf("\tpart_status_2 --------------- %c\n", temporal3.mbr_partition_2.part_status);
+            printf("\tpart_type_2 -----------------%c\n", temporal3.mbr_partition_2.part_type);
+            printf("\tpart_fit_2 -----------------%c\n", temporal3.mbr_partition_2.part_fit);
+            printf("\tpart_start_2 -----------------%d\n", temporal3.mbr_partition_2.part_start);
+            printf("\tpart_zise_2 -----------------%d\n", temporal3.mbr_partition_2.part_size);
+            printf("\tpart_name_2 -----------------%s\n", temporal3.mbr_partition_2.part_name);
+
+            printf("part_status_3 --------------- %d\n", temporal3.mbr_partition_3.part_size);
+
+            printf("\tpart_status_3 --------------- %c\n", temporal3.mbr_partition_3.part_status);
+            printf("\tpart_type_3 -----------------%c\n", temporal3.mbr_partition_3.part_type);
+            printf("\tpart_fit_3 -----------------%c\n", temporal3.mbr_partition_3.part_fit);
+            printf("\tpart_start_3 -----------------%d\n", temporal3.mbr_partition_3.part_start);
+            printf("\tpart_zise_3 -----------------%d\n", temporal3.mbr_partition_3.part_size);
+            printf("\tpart_name_3 -----------------%s\n", temporal3.mbr_partition_3.part_name);
+
+            printf("part_status_4 --------------- %d\n", temporal3.mbr_partition_4.part_size);
+
+            printf("\tpart_status_4 --------------- %c\n", temporal3.mbr_partition_4.part_status);
+            printf("\tpart_type_4 -----------------%c\n", temporal3.mbr_partition_4.part_type);
+            printf("\tpart_fit_4 -----------------%c\n", temporal3.mbr_partition_4.part_fit);
+            printf("\tpart_start_4 -----------------%d\n", temporal3.mbr_partition_4.part_start);
+            printf("\tpart_zise_4 -----------------%d\n", temporal3.mbr_partition_4.part_size);
+            printf("\tpart_name_4 -----------------%s\n", temporal3.mbr_partition_4.part_name);
+        } else {
+            actual = actual->siguiente;
+        }
+    }
+}
+
+void sampar(char letra, char path[], char nombre[], char numero[], char id[]) {
+    LISTA * nuevo_nodo = (LISTA *) malloc(sizeof (LISTA));
+    if (primero == NULL) {
+        primero = nuevo_nodo;
+        ultimo = nuevo_nodo;
+        strcpy(nuevo_nodo->id, id);
+        strcpy(nuevo_nodo->numero_particion, numero);
+        nuevo_nodo->letra = letra;
+        strcpy(nuevo_nodo->path, path);
+        strcpy(nuevo_nodo->nombre, nombre);
+    } else {
+        ultimo->siguiente = nuevo_nodo;
+        ultimo = nuevo_nodo;
+        strcpy(nuevo_nodo->id, id);
+        strcpy(nuevo_nodo->numero_particion, numero);
+        nuevo_nodo->letra = letra;
+        strcpy(nuevo_nodo->path, path);
+        strcpy(nuevo_nodo->nombre, nombre);
+    }
+}
+
+void sampar_id(char path[], char nombre[], char letra, int contador) {
+    char temporal[100];
+    sprintf(temporal, "vd%c%d", letra, contador);
+
+    LISTA * nuevo_nodo = (LISTA *) malloc(sizeof (LISTA));
+    if (primer_id == NULL) {
+        primer_id = nuevo_nodo;
+        ultimo_id = nuevo_nodo;
+        strcpy(nuevo_nodo->id, temporal);
+        strcpy(nuevo_nodo->path, path);
+        strcpy(nuevo_nodo->nombre, nombre);
+    } else {
+        ultimo_id->siguiente = nuevo_nodo;
+        ultimo_id = nuevo_nodo;
+        strcpy(nuevo_nodo->id, temporal);
+        strcpy(nuevo_nodo->path, path);
+        strcpy(nuevo_nodo->nombre, nombre);
+    }
+}
+
+void imprimir() {
+    struct nodo_lista * temporal = primero;
+    while (temporal != NULL) {
+        printf("nodo %s\n", temporal->id);
+        printf("nodo %s\n", temporal->numero_particion);
+        printf("nodo %c\n", temporal->letra);
+        printf("nodo %s\n", temporal->path);
+        printf("nodo %s\n\n", temporal->nombre);
+        temporal = temporal->siguiente;
+    }
+}
+
+void imprimir_ids() {
+    struct nodo_lista * temporal = primer_id;
+    while (temporal != NULL) {
+        printf("id %s ", temporal->id);
+        printf(" -path \"%s ", temporal->path);
+        printf("\" -name \"%s\"\n", temporal->nombre);
+        temporal = temporal->siguiente;
+    }
+}
+
+void inicializar_lista() {
+    char letras[28] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
+
+    int contador = 0;
+    while (contador < 26) {
+        sampar(letras[contador], " ", " ", " ", " ");
+        contador++;
+    }
+    //mount -path::"/home/disquitos/Disco1.dsk" -name::"Part_02"
+    //Montar_particion("/home/tony/disquitos/Disco1.dsk", "Part_02");
+    //imprimir_ids();
 
 }

@@ -3,8 +3,10 @@
 	<stdio.h>
 	<stdlib.h>
 
-1470797030 source:/home/tony/Escritorio/Proyecto MIA/MIA 200814170/Proyecto_MIA/main.c
+1470950090 source:/home/tony/Escritorio/Proyecto MIA/MIA 200814170/Proyecto_MIA/main.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
+	<dirent.h>
+	<sys/stat.h>
 
